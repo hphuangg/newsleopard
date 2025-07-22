@@ -26,21 +26,30 @@ The API will be available at: http://localhost:8000
 
 ### Local Development
 
-1. Install dependencies:
+1. Create and activate virtual environment (recommended):
+
+```bash
+python -m venv venv
+source venv/bin/activate  # macOS/Linux
+# or
+venv\Scripts\activate  # Windows
+```
+
+2. Install dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-2. Set up environment variables:
+3. Set up environment variables:
 
 ```bash
 cp .env.example .env
 ```
 
-3. Start PostgreSQL database (ensure it's running on localhost:5432)
+4. Start PostgreSQL database (ensure it's running on localhost:5432)
 
-4. Run the application:
+5. Run the application:
 
 ```bash
 uvicorn app.main:app --reload
