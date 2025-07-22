@@ -1,3 +1,16 @@
+PROJECT_STRUCTURE.md
+tech_assessment.md
+
+# .claude
+.claude/
+
+# prompts
+prompts/
+
+# .sprints
+.sprints/
+
+
 # Python virtual environments
 venv/
 .env

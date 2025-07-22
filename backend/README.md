@@ -105,8 +105,18 @@ See `.env.example` for all available configuration options.
 - `GET /` - Root endpoint
 - `GET /health` - Health check
 
+### Line 文案分析 API
+- `POST /api/v1/analyze` - 分析 Line 文案內容，提供 AI 評分與建議
+- `GET /api/v1/analyze/{analysis_id}` - 查詢分析結果
+
 ### Items (Sample CRUD)
 - `GET /api/v1/items/` - List all items
 - `GET /api/v1/items/{item_id}` - Get specific item
 - `POST /api/v1/items/` - Create new item
 - `DELETE /api/v1/items/{item_id}` - Delete item
+
+## API 設計文件
+
+完整的 API 設計規格請參考：
+- **API 設計**: `/docs/API.md` - 包含完整的 endpoint 規格、request/response schema 和錯誤處理
+- **資料庫設計**: `/docs/DATABASE.md` - 包含資料表結構、索引設計和查詢範例
