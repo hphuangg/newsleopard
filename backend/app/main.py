@@ -3,11 +3,18 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.api.v1.api import api_router
+import logging
 
 app = FastAPI(
-    title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json"
+    title=settings.project_name,
+    openapi_url=f"{settings.api_v1_str}/openapi.json"
 )
+
+# 新增: 啟動時打印資料庫連線字串
+@app.on_event("startup")
+async def print_db_url():
+    logging.basicConfig(level=logging.INFO)
+    logging.info(f"[Startup] Database URL: {settings.database.url}")
 
 app.add_middleware(
     CORSMiddleware,
@@ -17,7 +24,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(api_router, prefix=settings.API_V1_STR)
+app.include_router(api_router, prefix=settings.api_v1_str)
 
 
 @app.get("/")

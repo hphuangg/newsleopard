@@ -12,7 +12,7 @@ router = APIRouter()
 
 
 @router.post("/analyze", response_model=AnalysisResponse, status_code=status.HTTP_201_CREATED)
-@handle_service_exceptions
+# @handle_service_exceptions  # 暫時註解掉來看詳細錯誤
 async def create_analysis(
     analysis_data: AnalysisCreate,
     analysis_service: AnalysisService = Depends(get_analysis_service)

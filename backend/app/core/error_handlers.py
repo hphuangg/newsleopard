@@ -6,6 +6,9 @@ from app.core.exceptions import AIServiceException, BusinessLogicException, Syst
 
 def handle_service_exceptions(func):
     """Service 異常處理裝飾器"""
+    from functools import wraps
+    
+    @wraps(func)
     async def wrapper(*args, **kwargs):
         try:
             return await func(*args, **kwargs)
