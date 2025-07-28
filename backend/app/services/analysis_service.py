@@ -1,7 +1,7 @@
 """分析服務 - 處理文案分析的業務邏輯"""
 
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
@@ -63,7 +63,7 @@ class AnalysisService:
                 ai_model_used=self.ai_client.model,
                 processing_time=processing_time,
                 status="completed",
-                updated_at=datetime.utcnow()
+                updated_at=datetime.now(timezone.utc)
             )
             
             return updated_analysis or db_analysis
@@ -76,7 +76,7 @@ class AnalysisService:
                 status="failed",
                 error_message=e.message,
                 processing_time=processing_time,
-                updated_at=datetime.utcnow()
+                updated_at=datetime.now(timezone.utc)
             )
             return failed_analysis or db_analysis
         
@@ -88,7 +88,7 @@ class AnalysisService:
                 status="failed",
                 error_message=f"系統錯誤: {str(e)}",
                 processing_time=processing_time,
-                updated_at=datetime.utcnow()
+                updated_at=datetime.now(timezone.utc)
             )
             return failed_analysis or db_analysis
     
@@ -123,7 +123,4 @@ class AnalysisService:
         )
 
 
-# 建立全域實例
-def get_analysis_service() -> AnalysisService:
-    """獲取分析服務實例"""
-    return AnalysisService()
+# 注意：get_analysis_service 已移到 app.core.dependencies

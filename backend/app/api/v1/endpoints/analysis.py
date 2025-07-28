@@ -2,15 +2,17 @@
 
 from uuid import UUID
 from fastapi import APIRouter, HTTPException, Depends, status
-from app.services.analysis_service import AnalysisService, get_analysis_service
+from app.services.analysis_service import AnalysisService
 from app.schemas.analysis import AnalysisCreate, AnalysisResponse
-from app.core.exceptions import AIServiceException, BusinessLogicException, SystemException
+from app.core.dependencies import get_analysis_service
+from app.core.error_handlers import handle_service_exceptions
 
 
 router = APIRouter()
 
 
 @router.post("/analyze", response_model=AnalysisResponse, status_code=status.HTTP_201_CREATED)
+@handle_service_exceptions
 async def create_analysis(
     analysis_data: AnalysisCreate,
     analysis_service: AnalysisService = Depends(get_analysis_service)
@@ -24,60 +26,15 @@ async def create_analysis(
     
     回傳分析記錄，包含 analysis_id 用於後續查詢結果
     """
-    try:
-        # 使用分析服務建立並執行分析
-        db_analysis = await analysis_service.create_and_analyze(analysis_data)
-        
-        # 轉換為 API 回應格式
-        return analysis_service.convert_to_response(db_analysis)
-        
-    except AIServiceException as e:
-        # AI 服務錯誤 - 根據錯誤類型回傳適當的 HTTP 狀態碼
-        if "rate_limit" in e.code.lower():
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=e.to_dict(),
-                headers={"Retry-After": str(e.retry_after)} if e.retry_after else None
-            )
-        elif "quota" in e.code.lower():
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=e.to_dict()
-            )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=e.to_dict()
-            )
+    # 使用分析服務建立並執行分析
+    db_analysis = await analysis_service.create_and_analyze(analysis_data)
     
-    except BusinessLogicException as e:
-        # 業務邏輯錯誤 - 400 Bad Request
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=e.to_dict()
-        )
-    
-    except SystemException as e:
-        # 系統錯誤 - 500 Internal Server Error
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=e.to_dict()
-        )
-    
-    except Exception as e:
-        # 未預期的錯誤
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={
-                "error": {
-                    "code": "INTERNAL_ERROR",
-                    "message": "系統發生未預期的錯誤"
-                }
-            }
-        )
+    # 轉換為 API 回應格式
+    return analysis_service.convert_to_response(db_analysis)
 
 
 @router.get("/analyze/{analysis_id}", response_model=AnalysisResponse)
+@handle_service_exceptions
 async def get_analysis(
     analysis_id: UUID,
     analysis_service: AnalysisService = Depends(get_analysis_service)
@@ -89,36 +46,19 @@ async def get_analysis(
     
     回傳分析記錄和結果（如果已完成）
     """
-    try:
-        # 查詢分析記錄
-        db_analysis = analysis_service.get_analysis_by_id(analysis_id)
-        
-        if not db_analysis:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail={
-                    "error": {
-                        "code": "ANALYSIS_NOT_FOUND",
-                        "message": f"找不到分析記錄: {analysis_id}"
-                    }
-                }
-            )
-        
-        # 轉換為 API 回應格式
-        return analysis_service.convert_to_response(db_analysis)
-        
-    except HTTPException:
-        # 重新拋出已處理的 HTTP 異常
-        raise
+    # 查詢分析記錄
+    db_analysis = analysis_service.get_analysis_by_id(analysis_id)
     
-    except Exception as e:
-        # 未預期的錯誤
+    if not db_analysis:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail={
                 "error": {
-                    "code": "INTERNAL_ERROR",
-                    "message": "系統發生未預期的錯誤"
+                    "code": "ANALYSIS_NOT_FOUND",
+                    "message": f"找不到分析記錄: {analysis_id}"
                 }
             }
         )
+    
+    # 轉換為 API 回應格式
+    return analysis_service.convert_to_response(db_analysis)
