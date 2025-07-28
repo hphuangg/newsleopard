@@ -1,30 +1,69 @@
-from typing import Optional
+from typing import Optional, Dict, Any
+from pydantic import Field
 from pydantic_settings import BaseSettings
 
 
-class Settings(BaseSettings):
-    PROJECT_NAME: str = "Backend API"
-    API_V1_STR: str = "/api/v1"
-    
-    # PostgreSQL Database
-    POSTGRES_SERVER: str = "localhost"
-    POSTGRES_USER: str = "postgres"
-    POSTGRES_PASSWORD: str = "postgres"
-    POSTGRES_DB: str = "backend"
-    POSTGRES_PORT: int = 5432
-    
-    # OpenAI Settings
-    OPENAI_API_KEY: Optional[str] = None
-    OPENAI_MODEL: str = "gpt-4o-mini"
-    OPENAI_MAX_TOKENS: int = 1000
-    OPENAI_TEMPERATURE: float = 0.3
+class DatabaseSettings(BaseSettings):
+    """資料庫配置"""
+    server: str = Field(default="localhost", alias="POSTGRES_SERVER")
+    user: str = Field(default="postgres", alias="POSTGRES_USER")
+    password: str = Field(default="postgres", alias="POSTGRES_PASSWORD")
+    database: str = Field(default="backend", alias="POSTGRES_DB")
+    port: int = Field(default=5432, alias="POSTGRES_PORT")
     
     @property
-    def DATABASE_URL(self) -> str:
-        return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+    def url(self) -> str:
+        return f"postgresql://{self.user}:{self.password}@{self.server}:{self.port}/{self.database}"
+
+
+class AIProviderSettings(BaseSettings):
+    """AI 提供商基礎配置"""
+    max_retries: int = 3
+    timeout: int = 30
+    max_tokens: int = 1000
+    temperature: float = 0.3
+
+
+class OpenAISettings(AIProviderSettings):
+    """OpenAI 配置"""
+    api_key: Optional[str] = Field(default=None, alias="OPENAI_API_KEY")
+    model: str = Field(default="gpt-4o-mini", alias="OPENAI_MODEL")
+    max_tokens: int = Field(default=1000, alias="OPENAI_MAX_TOKENS")
+    temperature: float = Field(default=0.3, alias="OPENAI_TEMPERATURE")
+    organization: Optional[str] = Field(default=None, alias="OPENAI_ORGANIZATION")
+
+
+class ClaudeSettings(AIProviderSettings):
+    """Claude 配置"""
+    api_key: Optional[str] = Field(default=None, alias="CLAUDE_API_KEY")
+    model: str = Field(default="claude-3-haiku-20240307", alias="CLAUDE_MODEL")
+    max_tokens: int = Field(default=1000, alias="CLAUDE_MAX_TOKENS")
+
+
+class AISettings(BaseSettings):
+    """AI 服務總配置"""
+    default_provider: str = Field(default="openai", alias="AI_DEFAULT_PROVIDER")
+    openai: OpenAISettings = OpenAISettings()
+    claude: ClaudeSettings = ClaudeSettings()
+    
+    # 全域 AI 設定
+    analysis_timeout: int = Field(default=60, alias="AI_ANALYSIS_TIMEOUT")
+    concurrent_requests: int = Field(default=5, alias="AI_CONCURRENT_REQUESTS")
+
+
+class Settings(BaseSettings):
+    """主要應用程式配置"""
+    project_name: str = Field(default="Backend API", alias="PROJECT_NAME")
+    api_v1_str: str = Field(default="/api/v1", alias="API_V1_STR")
+    debug: bool = Field(default=False, alias="DEBUG")
+    
+    # 子配置
+    database: DatabaseSettings = DatabaseSettings()
+    ai: AISettings = AISettings()
     
     class Config:
         env_file = ".env"
+        case_sensitive = False
 
 
 settings = Settings()

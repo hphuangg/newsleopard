@@ -8,15 +8,21 @@ from uuid import UUID
 
 from app.schemas.analysis import AnalysisCreate, AnalysisResponse
 from app.models.analysis import AnalysisRecord
-from app.crud.analysis import crud_analysis
-from app.services.ai_client import OpenAIClient, AIAnalysisError
+from app.crud.analysis import AnalysisCRUD
+from app.services.ai_client import AIClientBase, get_default_ai_client
+from app.core.exceptions import AIServiceException, SystemException, AnalysisErrorCode
 
 
 class AnalysisService:
     """分析服務類別"""
     
-    def __init__(self, ai_client: Optional[OpenAIClient] = None):
-        self.ai_client = ai_client or OpenAIClient()
+    def __init__(
+        self, 
+        ai_client: Optional[AIClientBase] = None,
+        crud: Optional[AnalysisCRUD] = None
+    ):
+        self.ai_client = ai_client or get_default_ai_client()
+        self.crud = crud or AnalysisCRUD()
     
     async def create_and_analyze(
         self, 
@@ -26,7 +32,7 @@ class AnalysisService:
         """建立分析記錄並執行 AI 分析"""
         
         # 1. 建立 pending 狀態的分析記錄
-        db_analysis = crud_analysis.create(db, obj_in=analysis_data)
+        db_analysis = self.crud.create(db, obj_in=analysis_data)
         
         start_time = time.time()
         
@@ -55,13 +61,13 @@ class AnalysisService:
             
             return db_analysis
             
-        except AIAnalysisError as e:
+        except AIServiceException as e:
             # AI 分析失敗，標記為失敗狀態
             processing_time = time.time() - start_time
             return self._mark_analysis_failed(
                 db=db,
                 db_analysis=db_analysis,
-                error_message=str(e),
+                error_message=e.message,
                 processing_time=processing_time
             )
         
@@ -81,7 +87,7 @@ class AnalysisService:
         analysis_id: UUID
     ) -> Optional[AnalysisRecord]:
         """根據 analysis_id 查詢分析記錄"""
-        return crud_analysis.get_by_analysis_id(db, analysis_id=analysis_id)
+        return self.crud.get_by_analysis_id(db, analysis_id=analysis_id)
     
     def _update_analysis_results(
         self,

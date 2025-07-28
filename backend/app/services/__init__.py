@@ -1,10 +1,16 @@
-from .ai_client import OpenAIClient, AIAnalysisError, get_ai_client
+from .ai_client import AIClientBase, OpenAIClient, ClaudeClient, create_ai_client, get_default_ai_client
 from .analysis_service import AnalysisService, get_analysis_service
+from .prompts import PromptTemplate, get_analysis_prompt, get_prompt_registry
 
 __all__ = [
+    "AIClientBase",
     "OpenAIClient", 
-    "AIAnalysisError", 
-    "get_ai_client",
+    "ClaudeClient",
+    "create_ai_client",
+    "get_default_ai_client",
     "AnalysisService", 
-    "get_analysis_service"
+    "get_analysis_service",
+    "PromptTemplate",
+    "get_analysis_prompt",
+    "get_prompt_registry"
 ]
