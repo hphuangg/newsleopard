@@ -3,7 +3,12 @@ from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from uuid import uuid4
 
-from app.db.database import Base
+try:
+    from app.db.database import Base
+except ImportError:
+    # 測試環境中使用
+    from sqlalchemy.ext.declarative import declarative_base
+    Base = declarative_base()
 
 
 class AnalysisRecord(Base):

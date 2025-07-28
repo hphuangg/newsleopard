@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List
 from datetime import datetime
 from uuid import UUID
@@ -25,7 +25,8 @@ class AnalysisCreate(BaseModel):
     target_audience: TargetAudienceEnum = Field(..., description="目標受眾")
     send_scenario: SendScenarioEnum = Field(..., description="發送場景")
 
-    @validator('content')
+    @field_validator('content')
+    @classmethod
     def validate_content(cls, v):
         """驗證文案內容"""
         if not v or not v.strip():
@@ -58,8 +59,7 @@ class AnalysisResponse(BaseModel):
     created_at: datetime = Field(..., description="建立時間")
     results: Optional[AnalysisResults] = Field(None, description="分析結果")
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 class AnalysisCreateResponse(BaseModel):
@@ -69,5 +69,4 @@ class AnalysisCreateResponse(BaseModel):
     created_at: datetime = Field(..., description="建立時間")
     message: str = Field(default="分析記錄已建立，正在處理中", description="回應訊息")
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
