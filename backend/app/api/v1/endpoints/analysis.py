@@ -1,11 +1,7 @@
 """分析 API 端點"""
 
-from typing import Optional
 from uuid import UUID
 from fastapi import APIRouter, HTTPException, Depends, status
-from sqlalchemy.orm import Session
-
-from app.db.database import get_db
 from app.services.analysis_service import AnalysisService, get_analysis_service
 from app.schemas.analysis import AnalysisCreate, AnalysisResponse
 from app.core.exceptions import AIServiceException, BusinessLogicException, SystemException
@@ -17,7 +13,6 @@ router = APIRouter()
 @router.post("/analyze", response_model=AnalysisResponse, status_code=status.HTTP_201_CREATED)
 async def create_analysis(
     analysis_data: AnalysisCreate,
-    db: Session = Depends(get_db),
     analysis_service: AnalysisService = Depends(get_analysis_service)
 ) -> AnalysisResponse:
     """
@@ -31,7 +26,7 @@ async def create_analysis(
     """
     try:
         # 使用分析服務建立並執行分析
-        db_analysis = await analysis_service.create_and_analyze(db, analysis_data)
+        db_analysis = await analysis_service.create_and_analyze(analysis_data)
         
         # 轉換為 API 回應格式
         return analysis_service.convert_to_response(db_analysis)
@@ -85,7 +80,6 @@ async def create_analysis(
 @router.get("/analyze/{analysis_id}", response_model=AnalysisResponse)
 async def get_analysis(
     analysis_id: UUID,
-    db: Session = Depends(get_db),
     analysis_service: AnalysisService = Depends(get_analysis_service)
 ) -> AnalysisResponse:
     """
@@ -97,7 +91,7 @@ async def get_analysis(
     """
     try:
         # 查詢分析記錄
-        db_analysis = analysis_service.get_analysis_by_id(db, analysis_id)
+        db_analysis = analysis_service.get_analysis_by_id(analysis_id)
         
         if not db_analysis:
             raise HTTPException(
