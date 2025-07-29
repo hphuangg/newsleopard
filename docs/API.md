@@ -86,3 +86,61 @@
 
 - `200 OK`: 查詢成功
 - `404 Not Found`: 分析記錄不存在
+
+## 3. 多管道發送 API
+
+### POST /api/v1/send-message
+
+透過多種管道（Line Bot、SMS、Email）發送訊息，支援單發和批次發送。
+
+**Request Schema:**
+
+```json
+{
+  "content": "string",              // 必填，發送內容
+  "channel": "string",              // 必填，發送管道：line, sms, email
+  "recipients": [                   // 必填，收件人列表
+    {
+      "type": "string",             // 收件人類型：line, sms, email
+      "id": "string"                // 收件人ID（Line用戶ID、手機號碼、Email地址）
+    }
+  ],
+  "batch_name": "string",           // 可選，批次名稱
+  "send_delay": "number"            // 可選，發送延遲秒數，預設0
+}
+```
+
+**輸入驗證規則:**
+- `content`: 字串長度必須在 1-2000 字之間
+- `channel`: 必須是 ["line", "sms", "email"] 其中之一
+- `recipients`: 陣列長度必須在 1-1000 之間
+- `recipients[].type`: 必須是 ["line", "sms", "email"] 其中之一
+- `recipients[].id`: 根據類型驗證格式
+- `send_delay`: 數字必須 >= 0
+
+**Response Schema:**
+
+```json
+{
+  "batch_id": "string",             // UUID，批次ID
+  "status": "string",               // 批次狀態：pending, processing, completed, failed
+  "total_count": "number",          // 發送總數
+  "message": "string",              // 回應訊息
+  "created_at": "datetime"          // 建立時間 (ISO 8601)
+}
+```
+
+**HTTP Status Codes:**
+
+- `200 OK`: 發送請求已接受
+- `400 Bad Request`: 請求參數錯誤
+- `422 Unprocessable Entity`: 輸入驗證失敗
+- `500 Internal Server Error`: 內部伺服器錯誤
+
+**錯誤代碼說明:**
+- `INVALID_CONTENT_LENGTH`: 發送內容長度超出限制
+- `INVALID_CHANNEL`: 無效的發送管道
+- `INVALID_RECIPIENTS`: 收件人格式錯誤
+- `RECIPIENTS_LIMIT_EXCEEDED`: 收件人數量超出限制
+- `CHANNEL_SERVICE_ERROR`: 發送管道服務錯誤
+
