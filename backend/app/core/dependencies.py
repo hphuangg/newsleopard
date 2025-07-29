@@ -37,3 +37,5 @@ def get_service_container() -> ServiceContainer:
 def get_analysis_service() -> AnalysisService:
     """FastAPI 依賴注入：獲取分析服務"""
     return get_service_container().get_analysis_service()
+
+
