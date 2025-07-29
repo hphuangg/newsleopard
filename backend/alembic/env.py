@@ -14,6 +14,8 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'app'))
 from app.core.config import settings
 from app.db.database import Base
 from app.models.analysis import AnalysisRecord
+from app.models.batch_send_record import BatchSendRecord
+from app.models.message_send_record import MessageSendRecord
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
