@@ -213,6 +213,89 @@ FOREIGN KEY (batch_id) REFERENCES batch_send_records(batch_id)
 ON DELETE CASCADE;
 ```
 
+## 3. 統計更新機制
+
+### 樂觀鎖版本控制
+
+`batch_send_records` 表中的 `version` 欄位用於樂觀鎖控制：
+
+```sql
+-- 樂觀鎖更新範例
+UPDATE batch_send_records 
+SET 
+    success_count = success_count + 1,
+    version = version + 1,
+    updated_at = NOW()
+WHERE batch_id = $1 AND version = $2;
+```
+
+### Trigger 備用機制
+
+建立 Trigger 函數和觸發器作為統計更新的備用機制：
+
+```sql
+-- 建立 Trigger 函數
+CREATE OR REPLACE FUNCTION update_batch_stats_backup()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- 只在狀態變更時觸發
+    IF NEW.status != OLD.status THEN
+        UPDATE batch_send_records 
+        SET 
+            success_count = (
+                SELECT COUNT(*) 
+                FROM message_send_records 
+                WHERE batch_id = NEW.batch_id AND status = 'success'
+            ),
+            failed_count = (
+                SELECT COUNT(*) 
+                FROM message_send_records 
+                WHERE batch_id = NEW.batch_id AND status = 'failed'
+            ),
+            pending_count = (
+                SELECT COUNT(*) 
+                FROM message_send_records 
+                WHERE batch_id = NEW.batch_id AND status = 'pending'
+            ),
+            version = version + 1,
+            updated_at = NOW()
+        WHERE batch_id = NEW.batch_id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 建立 Trigger（預設停用）
+CREATE TRIGGER trigger_update_batch_stats_backup
+    AFTER UPDATE ON message_send_records
+    FOR EACH ROW
+    EXECUTE FUNCTION update_batch_stats_backup();
+
+-- 預設停用 Trigger
+ALTER TABLE message_send_records 
+DISABLE TRIGGER trigger_update_batch_stats_backup;
+```
+
+### 統計一致性檢查
+
+```sql
+-- 檢查統計一致性的查詢
+SELECT 
+    b.batch_id,
+    b.success_count as stored_success,
+    b.failed_count as stored_failed,
+    b.pending_count as stored_pending,
+    COUNT(*) FILTER (WHERE m.status = 'success') as actual_success,
+    COUNT(*) FILTER (WHERE m.status = 'failed') as actual_failed,
+    COUNT(*) FILTER (WHERE m.status = 'pending') as actual_pending,
+    b.success_count = COUNT(*) FILTER (WHERE m.status = 'success') as success_match,
+    b.failed_count = COUNT(*) FILTER (WHERE m.status = 'failed') as failed_match,
+    b.pending_count = COUNT(*) FILTER (WHERE m.status = 'pending') as pending_match
+FROM batch_send_records b
+LEFT JOIN message_send_records m ON b.batch_id = m.batch_id
+GROUP BY b.batch_id, b.success_count, b.failed_count, b.pending_count;
+```
+
 ## 效能優化策略
 
 ### 1. 分割資料表（建議）
