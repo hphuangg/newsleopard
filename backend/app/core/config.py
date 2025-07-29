@@ -61,6 +61,31 @@ class AISettings(BaseSettings):
     model_config = {"env_file": ".env", "case_sensitive": False, "extra": "ignore"}
 
 
+class AWSSettings(BaseSettings):
+    """AWS 相關設定"""
+    access_key_id: str = Field(alias="AWS_ACCESS_KEY_ID")
+    secret_access_key: str = Field(alias="AWS_SECRET_ACCESS_KEY")
+    region: str = Field(default="ap-northeast-1", alias="AWS_REGION")
+    sqs_endpoint_url: Optional[str] = Field(default=None, alias="AWS_SQS_ENDPOINT_URL")
+    
+    model_config = {"env_file": ".env", "case_sensitive": False, "extra": "ignore"}
+
+
+class SQSSettings(BaseSettings):  
+    """SQS 佇列設定"""
+    send_queue_url: str = Field(alias="SQS_SEND_QUEUE_URL")
+    batch_queue_url: str = Field(alias="SQS_BATCH_QUEUE_URL")  
+    send_dlq_url: str = Field(alias="SQS_SEND_DLQ_URL")
+    batch_dlq_url: str = Field(alias="SQS_BATCH_DLQ_URL")
+    
+    # 佇列配置
+    message_retention_period: int = Field(default=1209600)  # 14天
+    visibility_timeout: int = Field(default=300)  # 5分鐘
+    max_receive_count: int = Field(default=3)  # DLQ 重試次數
+    
+    model_config = {"env_file": ".env", "case_sensitive": False, "extra": "ignore"}
+
+
 class Settings(BaseSettings):
     """主要應用程式配置"""
     project_name: str = Field(default="Backend API", alias="PROJECT_NAME")
@@ -70,6 +95,8 @@ class Settings(BaseSettings):
     # 子配置
     database: DatabaseSettings = DatabaseSettings()
     ai: AISettings = AISettings()
+    aws: AWSSettings = AWSSettings()
+    sqs: SQSSettings = SQSSettings()
     
     model_config = {
         "env_file": ".env",
