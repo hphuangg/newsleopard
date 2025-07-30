@@ -8,6 +8,7 @@
 import asyncio
 import logging
 import random
+import time
 from typing import Dict, Any
 from datetime import datetime
 
@@ -35,7 +36,8 @@ class MessageHandler:
             message_id = message['message_id']
             body = message['body']
             
-            logger.info(f"Processing message {message_id} from {queue_name}")
+            logger.info(f"📨 Processing message {message_id} from {queue_name}")
+            logger.debug(f"Message body: {body}")
             
             if queue_name == 'send_queue':
                 return await self._handle_single_send(body)
@@ -59,11 +61,13 @@ class MessageHandler:
             content = message_data.get('content')
             recipient = message_data.get('recipient')
             
-            logger.info(f"Sending single message: batch_id={batch_id}, message_id={message_id}, channel={channel}")
+            logger.info(f"📤 Sending single message: batch_id={batch_id}, message_id={message_id}, channel={channel}")
             
             # TODO: 整合 TASK-04 發送管道抽象層
-            # 目前模擬發送
-            await asyncio.sleep(0.5)  # 模擬發送延遲
+            # 目前模擬發送 (使用 time.sleep 避免事件循環問題)
+            logger.debug(f"⏳ Simulating send for message {message_id}")
+            time.sleep(0.1)  # 使用同步 sleep 來模擬發送延遲
+            logger.debug(f"⏰ Simulated send completed for message {message_id}")
             
             # 模擬發送結果
             success_rate = 0.9  # 90% 成功率
@@ -71,11 +75,11 @@ class MessageHandler:
             
             if is_success:
                 # TODO: 更新資料庫記錄為成功 (使用 shared models)
-                logger.info(f"Message {message_id} sent successfully")
+                logger.info(f"✅ Message {message_id} sent successfully via {channel}")
                 return True
             else:
                 # TODO: 更新資料庫記錄為失敗
-                logger.warning(f"Message {message_id} send failed")
+                logger.warning(f"❌ Message {message_id} send failed via {channel}")
                 return False
                 
         except Exception as e:

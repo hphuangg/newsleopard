@@ -25,7 +25,7 @@ class SQSClient:
         self.sqs_client = self.sqs_config.get_sqs_client()
         self.queue_urls = self.sqs_config.get_queue_urls()
         
-    async def send_message(self, queue_name: str, message_data: Dict[str, Any]) -> Optional[str]:
+    def send_message(self, queue_name: str, message_data: Dict[str, Any]) -> Optional[str]:
         """
         發送訊息到指定佇列
         
@@ -80,7 +80,7 @@ class SQSClient:
             logger.error(f"Unexpected error sending message to {queue_name}: {e}")
             return None
     
-    async def receive_messages(self, queue_name: str, max_messages: int = 1,
+    def receive_messages(self, queue_name: str, max_messages: int = 1,
                               wait_time_seconds: int = 20) -> List[Dict[str, Any]]:
         """
         從指定佇列接收訊息
@@ -143,7 +143,7 @@ class SQSClient:
             logger.error(f"Unexpected error receiving messages from {queue_name}: {e}")
             return []
     
-    async def delete_message(self, queue_name: str, receipt_handle: str) -> bool:
+    def delete_message(self, queue_name: str, receipt_handle: str) -> bool:
         """
         刪除已處理的訊息
         
@@ -177,11 +177,11 @@ class SQSClient:
             logger.error(f"Unexpected error deleting message from {queue_name}: {e}")
             return False
     
-    async def test_connection(self) -> bool:
+    def test_connection(self) -> bool:
         """測試 SQS 連接"""
         try:
             for queue_name in self.queue_urls.keys():
-                await self.receive_messages(queue_name, max_messages=1, wait_time_seconds=0)
+                self.receive_messages(queue_name, max_messages=1, wait_time_seconds=0)
             return True
         except Exception as e:
             logger.error(f"SQS connection test failed: {e}")

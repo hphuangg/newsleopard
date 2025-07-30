@@ -168,7 +168,7 @@ class SendService:
                         'created_at': message_record.created_at.isoformat()
                     }
                     
-                    task_id = await self.sqs_client.send_message(
+                    task_id = self.sqs_client.send_message(
                         queue_name='send_queue',
                         message_data=message_data
                     )
@@ -198,7 +198,7 @@ class SendService:
                     'total_count': len(batch_recipients)
                 }
                 
-                task_id = await self.sqs_client.send_message(
+                task_id = self.sqs_client.send_message(
                     queue_name='batch_queue',
                     message_data=batch_message_data
                 )

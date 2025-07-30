@@ -12,8 +12,8 @@ import sys
 from pathlib import Path
 from typing import List
 
-# 添加 shared 模組到路徑
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "shared"))
+# 添加根目錄到路徑以使用 shared 模組
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from shared.config.settings import settings
 from shared.utils.sqs_client import SQSClient
@@ -76,7 +76,7 @@ class WorkerService:
     
     def _setup_signal_handlers(self):
         """設定信號處理器"""
-        def signal_handler(signum, frame):
+        def signal_handler(signum, _):
             logger.info(f"Received signal {signum}, initiating graceful shutdown...")
             asyncio.create_task(self.stop())
         
@@ -87,7 +87,7 @@ class WorkerService:
         """驗證配置"""
         try:
             # 測試 SQS 連接
-            if not await self.sqs_client.test_connection():
+            if not self.sqs_client.test_connection():
                 logger.error("SQS connection test failed")
                 return False
                 
@@ -103,9 +103,10 @@ class WorkerService:
         logger.info(f"Started processing queue: {queue_name}")
         
         while self.running:
+            logger.debug(f"🔄 Queue {queue_name} processing loop iteration, running={self.running}")
             try:
                 # 接收訊息
-                messages = await self.sqs_client.receive_messages(
+                messages = self.sqs_client.receive_messages(
                     queue_name=queue_name,
                     max_messages=self.max_messages_per_poll,
                     wait_time_seconds=20  # 長輪詢
@@ -114,23 +115,28 @@ class WorkerService:
                 if not messages:
                     continue
                 
+                logger.info(f"📥 Received {len(messages)} messages from {queue_name}")
+                
                 # 處理每個訊息
                 for message in messages:
                     try:
+                        logger.info(f"🔄 Processing message {message['message_id']} from {queue_name}")
                         success = await self.message_handler.handle_message(queue_name, message)
                         
                         # 成功處理後刪除訊息
                         if success:
-                            await self.sqs_client.delete_message(
+                            self.sqs_client.delete_message(
                                 queue_name, message['receipt_handle']
                             )
-                            logger.info(f"Message {message['message_id']} processed and deleted")
+                            logger.info(f"✅ Message {message['message_id']} processed and deleted successfully")
                         else:
                             logger.warning(f"Message {message['message_id']} processing failed, will retry")
                             
                     except Exception as e:
-                        logger.error(f"Error processing message {message['message_id']}: {e}")
+                        logger.error(f"❌ Error processing message {message.get('message_id', 'unknown')}: {e}")
                         # 訊息處理失敗會自動回到佇列，超過重試次數後進入 DLQ
+                
+                logger.info(f"✅ Finished processing batch of {len(messages)} messages from {queue_name}")
                 
             except Exception as e:
                 logger.error(f"Error in queue processing loop for {queue_name}: {e}")
