@@ -3,15 +3,21 @@ Send Service
 
 統一發送服務，處理多管道訊息發送邏輯。
 現在整合 AWS SQS 進行非同步訊息處理。
+重構後使用 shared 模組。
 """
 
+import sys
+from pathlib import Path
 import logging
 from typing import List, Dict, Any, Optional
 from uuid import uuid4
 
+# 添加 shared 模組到路徑
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "shared"))
+
 from app.crud.batch_send_record import crud_batch_send_record
 from app.crud.message_send_record import crud_message_send_record
-from app.services.sqs_queue_manager import sqs_queue_manager
+from shared.utils.sqs_client import SQSClient
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +27,7 @@ class SendService:
     
     def __init__(self):
         self.supported_channels = ['line', 'sms', 'email']
+        self.sqs_client = SQSClient()
     
     async def send_message(
         self,
@@ -161,7 +168,7 @@ class SendService:
                         'created_at': message_record.created_at.isoformat()
                     }
                     
-                    task_id = await sqs_queue_manager.send_message(
+                    task_id = await self.sqs_client.send_message(
                         queue_name='send_queue',
                         message_data=message_data
                     )
@@ -191,7 +198,7 @@ class SendService:
                     'total_count': len(batch_recipients)
                 }
                 
-                task_id = await sqs_queue_manager.send_message(
+                task_id = await self.sqs_client.send_message(
                     queue_name='batch_queue',
                     message_data=batch_message_data
                 )

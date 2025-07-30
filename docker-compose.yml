@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: backend
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # localstack:
+  #   image: localstack/localstack
+  #   ports:
+  #     - "127.0.0.1:4566:4566"
+  #   environment:
+  #     - SERVICES=sqs
+  #     - DEBUG=1
+  #   volumes:
+  #     - "./volume:/tmp/localstack"
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:4566/health"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  localstack:
+    # container_name: "${LOCALSTACK_DOCKER_NAME:-localstack-main}"
+    image: localstack/localstack
+    ports:
+      - "127.0.0.1:4566:4566"            # LocalStack Gateway
+      - "127.0.0.1:4510-4559:4510-4559"  # external services port range
+    environment:
+      - SERVICES=sqs
+      # LocalStack configuration: https://docs.localstack.cloud/references/configuration/
+      - DEBUG=${DEBUG:-0}
+    volumes:
+      - "${LOCALSTACK_VOLUME_DIR:-./volume}:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+
+  # backend:
+  #   build: 
+  #     context: .
+  #     dockerfile: backend/Dockerfile
+  #   ports:
+  #     - "8000:8000"
+  #   environment:
+  #     - POSTGRES_SERVER=postgres
+  #     - AWS_SQS_ENDPOINT_URL=http://localstack:4566
+  #     - PYTHONPATH=/app
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     localstack:
+  #       condition: service_healthy
+  #   volumes:
+  #     - .:/app
+  #   command: ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+  # worker:
+  #   build:
+  #     context: .
+  #     dockerfile: worker/Dockerfile
+  #   environment:
+  #     - POSTGRES_SERVER=postgres
+  #     - AWS_SQS_ENDPOINT_URL=http://localstack:4566
+  #     - PYTHONPATH=/app
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     localstack:
+  #       condition: service_healthy
+  #     backend:
+  #       condition: service_started
+  #   volumes:
+  #     - .:/app
+  #   restart: unless-stopped
+
+volumes:
+  postgres_data:

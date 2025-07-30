@@ -22,7 +22,10 @@ os.environ.setdefault('SQS_SEND_DLQ_URL', 'http://sqs.us-east-1.localhost.locals
 os.environ.setdefault('SQS_BATCH_DLQ_URL', 'http://sqs.us-east-1.localhost.localstack.cloud:4566/000000000000/batch-dlq')
 
 # 添加專案路徑
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+current_dir = os.path.dirname(os.path.abspath(__file__))  # devtools 目錄
+project_root = os.path.dirname(current_dir)  # 專案根目錄
+sys.path.insert(0, os.path.join(project_root, 'backend'))  # backend 目錄
+sys.path.insert(0, project_root)  # 專案根目錄，讓 shared 可以被找到
 
 from app.services.sqs_queue_manager import sqs_queue_manager
 
@@ -124,9 +127,35 @@ async def consume_messages():
                 print(f"   ❌ 處理錯誤: {str(e)}")
                 break
 
+async def continuous_monitor():
+    """持續監控佇列狀態"""
+    print("🔄 開始持續監控 SQS 佇列...")
+    print("按 Ctrl+C 停止監控")
+    print("=" * 60)
+    
+    try:
+        while True:
+            # 清屏
+            os.system('clear' if os.name == 'posix' else 'cls')
+            
+            # 顯示當前時間
+            print(f"⏰ 監控時間: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            print("=" * 60)
+            
+            # 顯示佇列狀態
+            await show_queue_status()
+            
+            # 等待3秒
+            await asyncio.sleep(3)
+            
+    except KeyboardInterrupt:
+        print("\n⏹️  監控已停止")
+    except Exception as e:
+        print(f"\n❌ 監控錯誤: {e}")
+
 def show_help():
     """顯示使用說明"""
-    print("🚀 SQS 佣列監控工具")
+    print("🚀 SQS 佇列監控工具")
     print("=" * 60)
     print("使用方式:")
     print("  python sqs_monitor.py [command]")
@@ -135,11 +164,13 @@ def show_help():
     print("  status    - 查看佇列狀態和訊息內容（不刪除訊息）")
     print("  peek      - 同 status")
     print("  consume   - 處理並刪除佇列中的訊息")
+    print("  monitor   - 持續監控佇列狀態（每3秒更新）")
     print("  help      - 顯示此說明")
     print()
     print("範例:")
     print("  python sqs_monitor.py status     # 查看佇列狀態")
     print("  python sqs_monitor.py consume    # 處理所有訊息")
+    print("  python sqs_monitor.py monitor    # 持續監控")
 
 async def main():
     """主函數"""
@@ -149,6 +180,8 @@ async def main():
         await peek_messages()
     elif command == 'consume':
         await consume_messages()
+    elif command == 'monitor':
+        await continuous_monitor()
     elif command == 'help':
         show_help()
     else:

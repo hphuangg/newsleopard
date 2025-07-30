@@ -41,3 +41,6 @@ coverage.xml
 # Other common temp files
 *.swp
 *.swo
+
+# LocalStack
+volume/

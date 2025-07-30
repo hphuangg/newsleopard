@@ -1,18 +1,16 @@
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+"""
+Backend 資料庫連接
 
-from app.core.config import settings
+使用 shared 模組的資料庫配置。
+"""
 
-engine = create_engine(settings.database.url)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+import sys
+from pathlib import Path
 
-Base = declarative_base()
+# 添加 shared 模組到路徑
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "shared"))
 
+from shared.db.database import Base, engine, SessionLocal, get_db
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+# 重新匯出供 Backend 使用
+__all__ = ["Base", "engine", "SessionLocal", "get_db"]

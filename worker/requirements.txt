@@ -1,0 +1,16 @@
+# Worker 最小化依賴 - 只包含 Worker 需要的套件
+
+# AWS SQS 支援
+boto3==1.34.162
+botocore==1.34.162
+
+# 資料庫相關
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+
+# 配置管理
+pydantic==2.5.2
+pydantic-settings==2.1.0
+
+# 日誌和工具
+python-dotenv==1.0.0

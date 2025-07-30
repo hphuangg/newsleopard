@@ -35,7 +35,7 @@ cp .env.localstack .env
 
 ```bash
 # 查看佇列狀態
-python sqs_monitor.py status
+python devtools/sqs_monitor.py status
 
 # 啟動 Worker 處理訊息
 python sqs_worker.py
@@ -51,7 +51,7 @@ curl -X POST http://localhost:8000/api/v1/send/send-message \
 ### 核心檔案
 - `docker-compose.localstack-simple.yml` - LocalStack 配置
 - `.env.localstack` - 本地開發環境變數
-- `sqs_monitor.py` - 佇列監控工具
+- `devtools/sqs_monitor.py` - 佇列監控工具
 - `sqs_worker.py` - 訊息處理 Worker
 
 ### 環境配置
@@ -69,10 +69,10 @@ curl -X POST http://localhost:8000/api/v1/send/send-message \
 
 ```bash
 # 查看佇列狀態
-python sqs_monitor.py status
+python devtools/sqs_monitor.py status
 
 # 處理所有訊息
-python sqs_monitor.py consume
+python devtools/sqs_monitor.py consume
 
 # AWS CLI 查看
 aws --endpoint-url=http://localhost:4566 sqs list-queues
