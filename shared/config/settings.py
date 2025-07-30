@@ -49,6 +49,41 @@ class SQSSettings(BaseSettings):
     model_config = {"env_file": ".env", "case_sensitive": False, "extra": "ignore"}
 
 
+class LineBotSettings(BaseSettings):
+    """Line Bot 相關設定"""
+    channel_access_token: str = Field(default="", alias="LINE_CHANNEL_ACCESS_TOKEN")
+    channel_secret: str = Field(default="", alias="LINE_CHANNEL_SECRET")
+    
+    # 頻率限制設定
+    rate_limit_max_requests: int = Field(default=1000, alias="LINE_RATE_LIMIT_MAX_REQUESTS")
+    rate_limit_time_window: int = Field(default=3600, alias="LINE_RATE_LIMIT_TIME_WINDOW")
+    
+    # 連接設定
+    timeout: int = Field(default=30, alias="LINE_TIMEOUT")
+    retry_max_attempts: int = Field(default=3, alias="LINE_RETRY_MAX_ATTEMPTS")
+    
+    model_config = {"env_file": ".env", "case_sensitive": False, "extra": "ignore"}
+
+
+class ChannelSettings(BaseSettings):
+    """發送管道設定"""
+    
+    # SMS 設定（預留）
+    sms_api_key: str = Field(default="", alias="SMS_API_KEY")
+    sms_rate_limit_max_requests: int = Field(default=100, alias="SMS_RATE_LIMIT_MAX_REQUESTS")
+    sms_rate_limit_time_window: int = Field(default=3600, alias="SMS_RATE_LIMIT_TIME_WINDOW")
+    
+    # Email 設定（預留）
+    smtp_host: str = Field(default="", alias="SMTP_HOST")
+    smtp_port: int = Field(default=587, alias="SMTP_PORT")
+    smtp_username: str = Field(default="", alias="SMTP_USERNAME")
+    smtp_password: str = Field(default="", alias="SMTP_PASSWORD")
+    email_rate_limit_max_requests: int = Field(default=500, alias="EMAIL_RATE_LIMIT_MAX_REQUESTS")
+    email_rate_limit_time_window: int = Field(default=3600, alias="EMAIL_RATE_LIMIT_TIME_WINDOW")
+    
+    model_config = {"env_file": ".env", "case_sensitive": False, "extra": "ignore"}
+
+
 class SharedSettings(BaseSettings):
     """共用主要設定"""
     project_name: str = Field(default="NewsLeopard", alias="PROJECT_NAME")
@@ -81,6 +116,20 @@ class SharedSettings(BaseSettings):
         if not hasattr(self, '_sqs'):
             self._sqs = SQSSettings()
         return self._sqs
+    
+    @property
+    def line_bot(self) -> LineBotSettings:
+        """延遲載入 Line Bot 設定"""
+        if not hasattr(self, '_line_bot'):
+            self._line_bot = LineBotSettings()
+        return self._line_bot
+    
+    @property
+    def channels(self) -> ChannelSettings:
+        """延遲載入 Channel 設定"""
+        if not hasattr(self, '_channels'):
+            self._channels = ChannelSettings()
+        return self._channels
 
 
 # 全域設定實例

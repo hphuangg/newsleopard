@@ -1,13 +1,15 @@
 """
-發送管道 (預留給 TASK-04)
+Worker 發送管道實作
 
-此目錄預留給 TASK-04: 發送管道抽象層的實作。
-目前為空目錄結構。
+實作各種具體的發送管道、工廠模式和管道管理器。
 """
 
-# TODO: TASK-04 將在此實作
-# from .base import MessageChannel
-# from .line_bot import LineBotChannel
-# from .factory import ChannelFactory
+from .line_bot import LineBotChannel
+from .factory import ChannelFactory
+from .manager import ChannelManager
 
-# __all__ = ["MessageChannel", "LineBotChannel", "ChannelFactory"]
+__all__ = [
+    'LineBotChannel',
+    'ChannelFactory',
+    'ChannelManager'
+]

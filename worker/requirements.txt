@@ -14,3 +14,10 @@ pydantic-settings==2.1.0
 
 # 日誌和工具
 python-dotenv==1.0.0
+
+# Line Bot SDK
+line-bot-sdk==3.10.0
+
+# 測試依賴
+pytest==7.4.3
+pytest-asyncio==0.21.1
