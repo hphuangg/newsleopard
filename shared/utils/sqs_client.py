@@ -80,10 +80,10 @@ class SQSClient:
             logger.error(f"Unexpected error sending message to {queue_name}: {e}")
             return None
     
-    def receive_messages(self, queue_name: str, max_messages: int = 1,
+    async def receive_messages(self, queue_name: str, max_messages: int = 1,
                               wait_time_seconds: int = 20) -> List[Dict[str, Any]]:
         """
-        從指定佇列接收訊息
+        從指定佇列接收訊息 (異步版本)
         
         Args:
             queue_name: 佇列名稱
@@ -100,13 +100,20 @@ class SQSClient:
                 
             queue_url = self.queue_urls[queue_name]
             
-            # 接收訊息
-            response = self.sqs_client.receive_message(
-                QueueUrl=queue_url,
-                MaxNumberOfMessages=min(max_messages, 10),
-                WaitTimeSeconds=wait_time_seconds,
-                MessageAttributeNames=['All']
-            )
+            # 在線程池中執行同步 SQS 操作
+            import asyncio
+            
+            def _receive_messages_sync():
+                response = self.sqs_client.receive_message(
+                    QueueUrl=queue_url,
+                    MaxNumberOfMessages=min(max_messages, 10),
+                    WaitTimeSeconds=wait_time_seconds,
+                    MessageAttributeNames=['All']
+                )
+                return response
+            
+            # 使用 asyncio.to_thread 在線程池中執行
+            response = await asyncio.to_thread(_receive_messages_sync)
             
             messages = response.get('Messages', [])
             if not messages:
@@ -143,9 +150,9 @@ class SQSClient:
             logger.error(f"Unexpected error receiving messages from {queue_name}: {e}")
             return []
     
-    def delete_message(self, queue_name: str, receipt_handle: str) -> bool:
+    async def delete_message(self, queue_name: str, receipt_handle: str) -> bool:
         """
-        刪除已處理的訊息
+        刪除已處理的訊息 (異步版本)
         
         Args:
             queue_name: 佇列名稱
@@ -161,11 +168,17 @@ class SQSClient:
                 
             queue_url = self.queue_urls[queue_name]
             
-            # 刪除訊息
-            self.sqs_client.delete_message(
-                QueueUrl=queue_url,
-                ReceiptHandle=receipt_handle
-            )
+            # 在線程池中執行同步 SQS 操作
+            import asyncio
+            
+            def _delete_message_sync():
+                self.sqs_client.delete_message(
+                    QueueUrl=queue_url,
+                    ReceiptHandle=receipt_handle
+                )
+            
+            # 使用 asyncio.to_thread 在線程池中執行
+            await asyncio.to_thread(_delete_message_sync)
             
             logger.debug(f"Message deleted from {queue_name}")
             return True
@@ -177,11 +190,11 @@ class SQSClient:
             logger.error(f"Unexpected error deleting message from {queue_name}: {e}")
             return False
     
-    def test_connection(self) -> bool:
-        """測試 SQS 連接"""
+    async def test_connection(self) -> bool:
+        """測試 SQS 連接 (異步版本)"""
         try:
             for queue_name in self.queue_urls.keys():
-                self.receive_messages(queue_name, max_messages=1, wait_time_seconds=0)
+                await self.receive_messages(queue_name, max_messages=1, wait_time_seconds=0)
             return True
         except Exception as e:
             logger.error(f"SQS connection test failed: {e}")

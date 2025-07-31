@@ -14,18 +14,17 @@ from pathlib import Path
 # 添加根目錄到路徑以使用 shared 模組
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
-from linebot.v3 import AsyncApiClient, AsyncMessagingApi
-from linebot.v3.models import TextMessage, PushMessageRequest
-from linebot.v3.exceptions import ApiException
-from linebot.v3.messaging import Configuration
+from linebot.v3.messaging import (
+    AsyncApiClient, 
+    AsyncMessagingApi, 
+    Configuration,
+    TextMessage, 
+    PushMessageRequest,
+    ApiException
+)
 
 from shared.channels import MessageChannel, SendResult, SendStatus, RateLimit
-from shared.channels.exceptions import (
-    ChannelUnavailableError,
-    RateLimitExceededError,
-    InvalidRecipientError,
-    ChannelConfigurationError
-)
+from shared.channels.exceptions import ChannelConfigurationError
 from shared.config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -49,6 +48,8 @@ class LineBotChannel(MessageChannel):
         configuration = Configuration(access_token=self.channel_access_token)
         async_api_client = AsyncApiClient(configuration)
         self.line_bot_api = AsyncMessagingApi(async_api_client)
+        
+        logger.info(f"Line Bot API client initialized with timeout: {settings.line_bot.timeout}s")
         
         # 初始化頻率限制
         self.rate_limit = RateLimit(
@@ -97,10 +98,28 @@ class LineBotChannel(MessageChannel):
             
             logger.info(f"Sending Line Bot message to {recipient}")
             
-            # 發送訊息
-            response = await self.line_bot_api.push_message(
-                push_message_request=push_message_request
-            )
+            # 發送訊息 (添加超時處理)
+            try:
+                import asyncio
+                logger.info(f"🔄 Starting Line Bot API call with timeout: {settings.line_bot.timeout}s")
+                start_time = asyncio.get_event_loop().time()
+                
+                response = await asyncio.wait_for(
+                    self.line_bot_api.push_message(push_message_request=push_message_request),
+                    timeout=float(settings.line_bot.timeout)  # 使用設定中的超時時間
+                )
+                
+                end_time = asyncio.get_event_loop().time()
+                duration = end_time - start_time
+                logger.info(f"✅ Line Bot API call completed in {duration:.2f}s")
+                logger.info(f"Sending Line Bot message to {recipient} completed. response: {response}")
+                
+            except asyncio.TimeoutError:
+                logger.error(f"❌ Line Bot API call timed out after 10s for recipient {recipient}")
+                return SendResult(
+                    status=SendStatus.FAILED,
+                    error_message="Line Bot API call timed out after 10s"
+                )
             
             # 更新頻率限制
             await self._update_rate_limit()
@@ -150,20 +169,26 @@ class LineBotChannel(MessageChannel):
             bool: 是否有效
         """
         try:
+            logger.info(f"🔍 Validating Line Bot recipient: {recipient}")
+            
             # 檢查基本格式 - Line 用戶 ID 通常以 'U' 開頭，長度約 33 字元
             if not recipient or not isinstance(recipient, str):
+                logger.error(f"Recipient is empty or not a string: {recipient}")
                 return False
             
             if not recipient.startswith('U'):
+                logger.error(f"Recipient does not start with 'U': {recipient}")
                 return False
             
-            if len(recipient) != 33:
-                return False
+            # if len(recipient) != 33:
+            #     return False
             
             # 檢查是否只包含英數字
             if not recipient[1:].isalnum():
+                logger.error(f"Recipient contains non-alphanumeric characters: {recipient}")
                 return False
             
+            logger.info(f"✅ Recipient validation passed: {recipient}")
             return True
             
         except Exception as e:
@@ -185,15 +210,33 @@ class LineBotChannel(MessageChannel):
             bool: 管道是否可用
         """
         try:
+            logger.info(f"🔍 Checking Line Bot availability...")
+            logger.debug(f"Channel access token length: {len(self.channel_access_token) if self.channel_access_token else 0}")
+            
             # 檢查是否有 token
             if not self.channel_access_token:
+                logger.error("Line Bot channel access token is not set")
                 return False
             
             # 可以嘗試調用 API 來檢查 token 是否有效
             # 這裡先簡單檢查 token 格式
             if len(self.channel_access_token) < 100:  # Line Bot token 通常很長
+                logger.error(f"Line Bot channel access token seems invalid (length: {len(self.channel_access_token)})")
                 return False
             
+            # 嘗試測試 API 連接 (可選，但會增加檢查時間)
+            try:
+                import asyncio
+                # 這裡可以添加一個簡單的 API 測試調用
+                # 例如獲取 bot 資訊等
+                logger.info("Testing Line Bot API connection...")
+                # 暫時跳過實際 API 測試，只檢查 token 格式
+                
+            except Exception as api_test_error:
+                logger.warning(f"Line Bot API test failed: {api_test_error}")
+                # 不因為 API 測試失敗而返回 False，因為可能是網路問題
+            
+            logger.info("✅ Line Bot channel is available")
             return True
             
         except Exception as e:

@@ -87,7 +87,7 @@ class WorkerService:
         """驗證配置"""
         try:
             # 測試 SQS 連接
-            if not self.sqs_client.test_connection():
+            if not await self.sqs_client.test_connection():
                 logger.error("SQS connection test failed")
                 return False
                 
@@ -106,7 +106,7 @@ class WorkerService:
             logger.debug(f"🔄 Queue {queue_name} processing loop iteration, running={self.running}")
             try:
                 # 接收訊息
-                messages = self.sqs_client.receive_messages(
+                messages = await self.sqs_client.receive_messages(
                     queue_name=queue_name,
                     max_messages=self.max_messages_per_poll,
                     wait_time_seconds=20  # 長輪詢
@@ -121,11 +121,23 @@ class WorkerService:
                 for message in messages:
                     try:
                         logger.info(f"🔄 Processing message {message['message_id']} from {queue_name}")
-                        success = await self.message_handler.handle_message(queue_name, message)
+                        logger.info(f"Message structure: {list(message.keys())}")
+                        logger.info(f"Message body keys: {list(message.get('body', {}).keys())}")
+                        logger.info(f"About to process message: {message}")
+                        
+                        # 添加時間戳
+                        import time
+                        start_time = time.time()
+                        
+                        result = await self.message_handler.handle_message(queue_name, message)
+                        
+                        end_time = time.time()
+                        duration = end_time - start_time
+                        logger.info(f"Message processing completed in {duration:.2f}s with result: {result}")
                         
                         # 成功處理後刪除訊息
-                        if success:
-                            self.sqs_client.delete_message(
+                        if result: # Assuming result is True for success
+                            await self.sqs_client.delete_message(
                                 queue_name, message['receipt_handle']
                             )
                             logger.info(f"✅ Message {message['message_id']} processed and deleted successfully")
